@@ -1,6 +1,7 @@
 import os
 from csv import DictWriter, QUOTE_ALL
 from lxml import etree
+import sys
 
 
 def convert_xml2csv(file_xml, csv_sep=';', quotechar='#', chunk_size=100):
@@ -13,13 +14,18 @@ def convert_xml2csv(file_xml, csv_sep=';', quotechar='#', chunk_size=100):
     chunked_rows = []
     header_created = False
     chunk_iterator = 0
+    temp_set = set()
+    amount = 0
     for event, elem in context:
         attribute = elem.attrib
+        amount += 1
+        for i in range(len(attribute)):
+            temp_set.add(list(dict(elem.attrib).keys())[i])
         chunked_rows.append(attribute)
         if len(chunked_rows) == chunk_size:
             with open(f'{filename_csv}.csv', 'a', newline='') as f_object:
                 dictwriter_object = DictWriter(f_object,
-                                               fieldnames=list(dict(chunked_rows[0])),
+                                               fieldnames=list(temp_set),
                                                delimiter=csv_sep,
                                                quotechar=quotechar,
                                                quoting=QUOTE_ALL)
@@ -30,11 +36,23 @@ def convert_xml2csv(file_xml, csv_sep=';', quotechar='#', chunk_size=100):
                     dictwriter_object.writerow(dict(row))
                 chunk_iterator += 1
                 print(f'Теущий чанк: {chunk_iterator}')
-                f_object.close()
             chunked_rows = []
             elem.clear()
         while elem.getprevious() is not None:
             del elem.getparent()[0]
+
+    with open(f'{filename_csv}.csv', 'a', newline='') as f_object:
+        dictwriter_object = DictWriter(f_object,
+                                       fieldnames=list(temp_set),
+                                       delimiter=csv_sep,
+                                       quotechar=quotechar,
+                                       quoting=QUOTE_ALL)
+        if not header_created:
+            dictwriter_object.writeheader()
+        for row in chunked_rows:
+            dictwriter_object.writerow(dict(row))
+        chunk_iterator += 1
+        print(f'Теущий чанк: {chunk_iterator}')
 
 
 def find_all_xmls(path=os.curdir):
@@ -54,34 +72,35 @@ def find_all_xmls(path=os.curdir):
 
 
 if __name__ == '__main__':
+   # convert_xml2csv('AS_ADM_HIERARCHY_20230126_2e058bc4_5d72_4f73_804c_2d63371ed4e3.XML')
     while True:
-        a = list(input('1 параметр - размер чанка (число должно делиться на количество строк)\n'
-                       '2 параметр - сепаратор в csv (по умол. ";")\n'
-                       '3 параметр - символ цитаты в csv (по умол. "#")\n'
-                       '4 параметр - относительный путь к директории с .xml файлами (по умол. текущая)\n').split())
-        if len(a) == 1:
-            chunk_size = int(a[0])
+        a = sys.argv
+        print(a)
+        if len(a) == 2:
+            chunk_size = int(a[1])
+            print(type(chunk_size))
             for file in find_all_xmls():
                 print(f'Работа с файлом "{file}"')
                 convert_xml2csv(file_xml=file, chunk_size=chunk_size)
-        elif len(a) == 2:
-            chunk_size = int(a[0])
-            csv_sep = a[1]
+                print('TEST')
+        elif len(a) == 3:
+            chunk_size =  int(a[1])
+            csv_sep = a[2]
             for file in find_all_xmls():
                 print(f'Работа с файлом "{file}"')
                 convert_xml2csv(file_xml=file, chunk_size=chunk_size, csv_sep=csv_sep)
-        elif len(a) == 3:
-            chunk_size = int(a[0])
-            csv_sep = a[1]
-            quotechar = a[2]
+        elif len(a) == 4:
+            chunk_size =  int(a[1])
+            csv_sep = a[2]
+            quotechar = a[3]
             for file in find_all_xmls():
                 print(f'Работа с файлом "{file}"')
                 convert_xml2csv(file_xml=file, chunk_size=chunk_size, csv_sep=csv_sep, quotechar=quotechar)
-        elif len(a) == 4:
-            chunk_size = int(a[0])
-            csv_sep = a[1]
-            quotechar = a[2]
-            file_path = a[3]
+        elif len(a) == 5:
+            chunk_size =  int(a[1])
+            csv_sep = a[2]
+            quotechar = a[3]
+            file_path = a[4]
             find = find_all_xmls(file_path)
             if find:
                 for file in find:
@@ -91,3 +110,4 @@ if __name__ == '__main__':
             print('Incorrect arguments')
 
         print('Процесс завершен')
+        break
